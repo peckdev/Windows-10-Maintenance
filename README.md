@@ -1,8 +1,7 @@
 # Windows-10-Maintenance-
-echo --------------------------------------------------------
-echo Script created and maintained by www.PeckDevelopment.com
-echo Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
-echo --------------------------------------------------------
+Script created and maintained by www.PeckDevelopment.com
+ Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
+ --------------------------------------------------------
 Features
 System Maintenance Tasks: 
 
