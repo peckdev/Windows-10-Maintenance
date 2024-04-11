@@ -17,10 +17,6 @@ if %errorLevel% == 0 (
 
 echo Disabling password expiration...
 wmic path Win32_UserAccount set PasswordExpires=False
-echo --------------------------------------------------------
-echo Script created and maintained by www.PeckDevelopment.com
-echo Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
-echo --------------------------------------------------------
 echo Checking for Windows updates...
 net start wuauserv
 echo Waiting for updates to be checked...
@@ -33,6 +29,10 @@ echo Installing updates...
 wusa.exe /detectnow /quiet /norestart
 echo Updates have been installed.
 echo Starting Dism scans...
+echo --------------------------------------------------------
+echo Script created and maintained by www.PeckDevelopment.com
+echo Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
+echo --------------------------------------------------------
 Dism.exe /online /cleanup-image /scanhealth
 Dism.exe /online /cleanup-image /restorehealth 
 
