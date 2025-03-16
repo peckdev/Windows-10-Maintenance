@@ -1,0 +1,33 @@
+# Powershell to remove duplicate files leveraging hashtable for file comparison
+# Define the directory to search for pictures
+$searchDirectory = "C:\Users\PDev\OneDrive\Pictures"
+
+# Get all picture files in the search directory
+$pictureFiles = Get-ChildItem -Path $searchDirectory -Recurse -Include *.jpg, *.jpeg, *.png, *.bmp, *.gif
+
+# Create a hashtable to store file hashes for comparison
+$hashTable = @{}
+
+# Loop through each picture file
+foreach ($pictureFile in $pictureFiles) {
+    # Get the hash of the current picture file
+    $currentPictureHash = Get-FileHash -Path $pictureFile.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+
+    # Check if the hash already exists in the hashtable
+    if ($hashTable.ContainsKey($currentPictureHash)) {
+        # If a duplicate is found, move the duplicate file to a "Duplicates" folder
+        $duplicateFolder = Join-Path -Path $searchDirectory -ChildPath "Duplicates"
+        if (-not (Test-Path -Path $duplicateFolder)) {
+            New-Item -Path $duplicateFolder -ItemType Directory | Out-Null
+        }
+
+        Write-Host "Duplicate found: $($pictureFile.FullName) matches $($hashTable[$currentPictureHash])"
+        $destinationPath = Join-Path -Path $duplicateFolder -ChildPath $pictureFile.Name
+        Move-Item -Path $pictureFile.FullName -Destination $destinationPath -Force
+    } else {
+        # If the hash is not in the hashtable, add it
+        $hashTable[$currentPictureHash] = $pictureFile.FullName
+    }
+}
+
+Write-Host "Comparison complete. Duplicates moved to '$duplicateFolder'."
