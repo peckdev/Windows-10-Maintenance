@@ -1,7 +1,7 @@
 @echo off
 echo --------------------------------------------------------
 echo Script created and maintained by www.PeckDevelopment.com
-echo Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
+echo Support at BTC bc1qflrqcnzdv0d33p7qll8fn4ht50hheavs5w0usd
 echo --------------------------------------------------------
 echo Checking for administrator privileges...
 net session >nul 2>&1
@@ -31,7 +31,7 @@ echo Updates have been installed.
 echo Starting Dism scans...
 echo --------------------------------------------------------
 echo Script created and maintained by www.PeckDevelopment.com
-echo Support at BTC bc1qw368jup8wl6uu5mfuw3vxuxw5elpqscata5c9t
+echo Support at BTC bc1qflrqcnzdv0d33p7qll8fn4ht50hheavs5w0usd
 echo --------------------------------------------------------
 Dism.exe /online /cleanup-image /scanhealth
 Dism.exe /online /cleanup-image /restorehealth 
