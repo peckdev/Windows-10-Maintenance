@@ -23,6 +23,8 @@ set "CLEAN_PROFILE=100"
 set "CLEAN_SKIP='DownloadsFolder','Recycle Bin','Previous Installations','Windows Upgrade Log Files'"
 :: ==========================================
 
+:: NOTE: do NOT escape | as ^| inside these quoted -Command strings.
+:: cmd treats | as literal inside quotes, and the caret reaches PowerShell.
 set "PS=powershell -NoProfile -ExecutionPolicy Bypass -Command"
 set "LOGDIR=%ProgramData%\PeckDevelopment"
 set "LOG=%LOGDIR%\maintenance.log"
@@ -53,7 +55,7 @@ echo Log: %LOG%
 if "%DO_RESTORE_POINT%"=="1" (
     echo.
     echo ==^> Creating system restore point...
-    %PS% "$k='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'; $n='SystemRestorePointCreationFrequency'; $o=(Get-ItemProperty $k -Name $n -EA SilentlyContinue).$n; New-ItemProperty -Path $k -Name $n -Value 0 -PropertyType DWord -Force ^| Out-Null; try { Enable-ComputerRestore -Drive '%SystemDrive%\' -EA SilentlyContinue; Checkpoint-Computer -Description 'PDev Maintenance' -RestorePointType MODIFY_SETTINGS -EA Stop; Write-Host '    [ OK ] Restore point created.' } catch { Write-Host ('    [WARN] ' + $_.Exception.Message); exit 1 } finally { if ($null -ne $o) { Set-ItemProperty $k -Name $n -Value $o } else { Remove-ItemProperty $k -Name $n -EA SilentlyContinue } }"
+    %PS% "$k='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'; $n='SystemRestorePointCreationFrequency'; $o=(Get-ItemProperty $k -Name $n -EA SilentlyContinue).$n; New-ItemProperty -Path $k -Name $n -Value 0 -PropertyType DWord -Force -EA SilentlyContinue | Out-Null; $rc=0; try { Enable-ComputerRestore -Drive '%SystemDrive%\' -EA SilentlyContinue; Checkpoint-Computer -Description 'PDev Maintenance' -RestorePointType MODIFY_SETTINGS -EA Stop; Write-Host '    [ OK ] Restore point created.' } catch { Write-Host ('    [WARN] ' + $_.Exception.Message); $rc=1 } finally { if ($null -ne $o) { Set-ItemProperty $k -Name $n -Value $o } else { Remove-ItemProperty $k -Name $n -EA SilentlyContinue } }; exit $rc"
     if errorlevel 1 call :Warn "Restore point failed"
 )
 
@@ -61,7 +63,7 @@ if "%DO_RESTORE_POINT%"=="1" (
 if "%DISABLE_PW_EXPIRY%"=="1" (
     echo.
     echo ==^> Disabling password expiration...
-    %PS% "if ((Get-CimInstance Win32_ComputerSystem).DomainRole -ge 4) { Write-Host '    [WARN] Domain controller - skipped.'; exit 1 } else { Get-LocalUser ^| Where-Object { $_.Enabled -and -not $_.PasswordNeverExpires } ^| ForEach-Object { try { Set-LocalUser -Name $_.Name -PasswordNeverExpires $true -EA Stop; Write-Host ('    [ OK ] ' + $_.Name) } catch { Write-Host ('    [WARN] ' + $_.Name) } } }"
+    %PS% "if ((Get-CimInstance Win32_ComputerSystem).DomainRole -ge 4) { Write-Host '    [WARN] Domain controller - skipped.'; exit 1 }; Get-LocalUser | Where-Object { $_.Enabled -and -not $_.PasswordNeverExpires } | ForEach-Object { try { Set-LocalUser -Name $_.Name -PasswordNeverExpires $true -EA Stop; Write-Host ('    [ OK ] ' + $_.Name) } catch { Write-Host ('    [WARN] ' + $_.Name) } }; exit 0"
     if errorlevel 1 call :Warn "Password expiry step skipped on domain controller"
 )
 
@@ -72,7 +74,7 @@ if "%DO_UPDATES%"=="1" (
     echo.
     echo ==^> Windows Update...
     sc query wuauserv | find "RUNNING" >nul 2>&1 || net start wuauserv >nul 2>&1
-    %PS% "if (Get-Module -ListAvailable PSWindowsUpdate) { Import-Module PSWindowsUpdate; $f = Get-WindowsUpdate -MicrosoftUpdate; if ($f) { Write-Host ('    ' + $f.Count + ' update(s) found. Installing...'); Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot -Confirm:$false ^| Out-String ^| Write-Host } else { Write-Host '    [ OK ] No applicable updates.' } } else { Write-Host '    [WARN] PSWindowsUpdate not installed - using UsoClient, which reports nothing back.'; Write-Host '           Install once: Install-Module PSWindowsUpdate -Force -Scope AllUsers'; UsoClient StartInteractiveScan; Start-Sleep 5; UsoClient StartDownload; UsoClient StartInstall }"
+    %PS% "if (Get-Module -ListAvailable PSWindowsUpdate) { Import-Module PSWindowsUpdate; $f = Get-WindowsUpdate -MicrosoftUpdate; if ($f) { Write-Host ('    ' + @($f).Count + ' update(s) found. Installing...'); Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot -Confirm:$false | Out-String | Write-Host } else { Write-Host '    [ OK ] No applicable updates.' } } else { Write-Host '    [WARN] PSWindowsUpdate not installed - using UsoClient, which reports nothing back.'; Write-Host '           Install once: Install-Module PSWindowsUpdate -Force -Scope AllUsers'; UsoClient StartInteractiveScan; Start-Sleep 5; UsoClient StartDownload; UsoClient StartInstall }; exit 0"
 )
 
 :: ---------- 4. Component store + SFC ----------
@@ -112,7 +114,7 @@ if "%DO_CLEANUP%"=="1" (
     echo ==^> Disk cleanup...
     for /f %%F in ('%PS% "[math]::Round((Get-PSDrive %SystemDrive:~0,1%).Free/1GB,2)"') do set "FREE_BEFORE=%%F"
 
-    %PS% "$skip=@(%CLEAN_SKIP%); $f='StateFlags'+('%CLEAN_PROFILE%'.PadLeft(4,'0')); Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches' ^| ForEach-Object { $v = if ($skip -contains $_.PSChildName) {0} else {2}; New-ItemProperty -Path $_.PSPath -Name $f -Value $v -PropertyType DWord -Force ^| Out-Null }"
+    %PS% "$skip=@(%CLEAN_SKIP%); $f='StateFlags'+('%CLEAN_PROFILE%'.PadLeft(4,'0')); Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches' | ForEach-Object { $v = if ($skip -contains $_.PSChildName) {0} else {2}; New-ItemProperty -Path $_.PSPath -Name $f -Value $v -PropertyType DWord -Force -EA SilentlyContinue | Out-Null }; exit 0"
 
     start "" /wait cleanmgr.exe /sagerun:%CLEAN_PROFILE%
 
